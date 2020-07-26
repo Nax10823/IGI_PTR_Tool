@@ -15,7 +15,7 @@ if [ "$(whoami)" != "root" ]; then
     exit 4
 fi
 
-command_ls=("whoami", "git", "make", "mkdir", "sed", "mv", "apt", "grep")
+command_ls=("whoami" "git" "make" "mkdir" "sed" "mv" "apt" "grep")
 for cmd in "${command_ls[@]}"; do
     if ! command -v "$cmd" &> /dev/null ; then
         echo "$cmd not found"
