@@ -499,6 +499,21 @@ void check_client()
 	if (newsd <= 0)
 		return;
 
+	struct sockaddr_in exp_10241_addr = {
+		.sin_addr.s_addr = htonl(INADDR_ANY),
+		.sin_family = AF_INET,
+		.sin_port = htons(10241)};
+
+	int exp_10241_sock;
+	while (1)
+	{
+		exp_10241_sock = socket(AF_INET, SOCK_DGRAM, 0);
+		if (bind(exp_10241_sock, (struct sockaddr *)&exp_10241_addr, sizeof(exp_10241_addr)) == 0)
+			break;
+		close(exp_10241_sock);
+		sleep(1);
+	}
+
 	/* get src addresses */
 	strcpy(src_ip_str, inet_ntoa(src_addr.sin_addr));
 	src_ip = inet_addr(src_ip_str);
@@ -565,6 +580,8 @@ void check_client()
 			printf("listening port = %d \n", listening_port);
 		}
 	}
+
+	close(exp_10241_sock);
 }
 
 int main(int argc, char *argv[])
@@ -609,19 +626,18 @@ int main(int argc, char *argv[])
 
 	dst_port = START_PORT + 1;
 	dst_addr.sin_port = htons(dst_port);
-	while ((dst_port < END_PORT) && (bind(sock,
-										  (struct sockaddr *)&dst_addr, sizeof(dst_addr)) < 0))
-	{
-		dst_port++;
-		dst_addr.sin_port = htons(dst_port);
-	}
-
 	if (verbose)
 	{
 		printf("server port = %d \n", dst_port);
 	}
 
-	listen(sock, 5);
+	while ((bind(sock, (struct sockaddr *)&dst_addr, sizeof(dst_addr)) < 0))
+	{
+		dst_addr.sin_port = htons(dst_port);
+		sleep(1);
+	}
+
+	listen(sock, 10);
 
 	pthread_mutex_init(&filter_mutex, NULL);
 

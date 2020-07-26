@@ -530,12 +530,13 @@ void init_connection()
 	control_sock = socket(AF_INET, SOCK_STREAM, 0);
 	++dst_port;
 	server.sin_port = htons(dst_port);
+	if (verbose)
+		printf("dst_port = %d\n", dst_port);
 	result = connect(control_sock, (struct sockaddr *)&server, sizeof(server));
 	while ((result < 0) && (dst_port < END_PORT))
 	{
 		close(control_sock);
 		control_sock = socket(AF_INET, SOCK_STREAM, 0);
-		++dst_port;
 		server.sin_port = htons(dst_port);
 		result = connect(control_sock, (struct sockaddr *)&server, sizeof(server));
 		if (verbose)
