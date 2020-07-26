@@ -17,7 +17,7 @@ fi
 
 command_ls=("whoami", "git", "make", "mkdir", "sed", "mv", "apt", "grep")
 for cmd in "${command_ls[@]}"; do
-    if [ -z "$(command -v $cmd)" ]; then
+    if ! command -v "$cmd" &> /dev/null ; then
         echo "$cmd not found"
         exit 5
     fi
