@@ -37,9 +37,9 @@ igi_sh_path="$parent_path/igi.sh"
 mkdir data
 data_path="$parent_path/data"
 
-sed -i "s/PTRCLIENT_PATH/$binary_path/" igi_template.sh
-sed -i "s/DUMP_DIR_PATH/$data_path/" igi_template.sh
-sed -i "s/TARGET_IP/$1/" igi_template.sh
+sed -i "s|PTRCLIENT_PATH|$binary_path|" igi_template.sh
+sed -i "s|DUMP_DIR_PATH|$data_path|" igi_template.sh
+sed -i "s|TARGET_IP|$1|" igi_template.sh
 mv igi_template.sh igi.sh
 
 apt update
