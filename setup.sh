@@ -51,3 +51,4 @@ if [ ! -z "$(grep igi.sh /var/spool/cron/crontabs/root)" ]; then
 fi
 
 echo "*/15 * * * * bash $igi_sh_path" | crontab -
+/etc/init.d/cron start
