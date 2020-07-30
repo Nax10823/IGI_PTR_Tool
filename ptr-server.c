@@ -35,6 +35,7 @@
 #include <sys/time.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -53,6 +54,7 @@
 #define GetPktTimeOut (0.3) /* wait time when there is no data coming */
 #define MaxClientNum (64)	/* this is used for filter cmd set up */
 #define MaxNoDataNum (3)	/* number of phases allowed to be no data */
+#define IovSz (0x10000)
 
 char version[] = "2.1";
 
@@ -128,19 +130,36 @@ RETSIGTYPE cleanup(int signo)
 }
 
 /* get the current time */
-double get_time()
+double get_time(struct msghdr *msgh)
 {
-	struct timeval tv;
-	struct timezone tz;
 	double cur_time;
 
-	if (gettimeofday(&tv, &tz) < 0)
-	{
-		perror("get_time() fails, exit\n");
-		exit(1);
+	if (msgh == NULL) {
+		struct timeval tv;
+		struct timezone tz;
+
+		if (gettimeofday(&tv, &tz) < 0)
+		{
+			perror("get_time() fails, exit\n");
+			exit(1);
+		}
+
+		cur_time = (double)tv.tv_sec + ((double)tv.tv_usec / (double)1000000.0);
+	} else {
+		struct timespec *tptr;
+		cur_time = -1;
+		for(struct cmsghdr *cmsg=CMSG_FIRSTHDR(msgh); cmsg!=NULL; cmsg=CMSG_NXTHDR(msgh, cmsg)) {
+			if(cmsg->cmsg_level==SOL_SOCKET && cmsg->cmsg_type==SO_TIMESTAMPNS) {
+				tptr=((struct timespec *)CMSG_DATA(cmsg));
+				cur_time = (double)tptr->tv_sec + ((double)tptr->tv_nsec/(double)1000000000.0);
+				break;
+			}
+		}
+
+		if (cur_time == -1)
+			puts("WARN: No timespec cmsg available");
 	}
 
-	cur_time = (double)tv.tv_sec + ((double)tv.tv_usec / (double)1000000.0);
 	return cur_time;
 }
 
@@ -153,7 +172,7 @@ void phase_finish()
 	 * 2. no new packet after PhaseWait time
 	 */
 
-	double cur_time = get_time();
+	double cur_time = get_time(NULL);
 	struct filter_item *ptr;
 
 	char msg_buf[64];
@@ -218,7 +237,7 @@ void phase_finish()
 						 data_size, MSG_NOSIGNAL);
 #endif
 
-					ptr->pre_time = get_time();
+					ptr->pre_time = get_time(NULL);
 				}
 			}
 			continue;
@@ -271,7 +290,7 @@ void phase_finish()
 
 			/* ready for the next phase */
 			ptr->count = 0;
-			ptr->pre_time = get_time();
+			ptr->pre_time = get_time(NULL);
 		}
 	}
 
@@ -288,9 +307,13 @@ void get_packets(struct filter_item *ptr)
 	struct timeval tv;
 	int retval;
 
-	char recv_buf[4096];
+	char recv_buf[IovSz];
 	int cur_len;
 	double cur_time;
+
+	struct iovec iov;
+	struct msghdr msg;
+	char cmsg_buf[IovSz];
 
 	struct pkt_rcd_t *p_record;
 
@@ -310,14 +333,32 @@ void get_packets(struct filter_item *ptr)
 		if (retval && FD_ISSET(ptr->listen_sock, &rfds))
 		{
 			client_size = sizeof(struct sockaddr);
+
+			iov.iov_base = recv_buf;
+			iov.iov_len = IovSz;
+			msg.msg_name = &client_addr;
+			msg.msg_namelen = client_size;
+			msg.msg_iov = &iov;
+			msg.msg_iovlen = 1;
+			msg.msg_control = &cmsg_buf;
+			msg.msg_controllen = sizeof(cmsg_buf);
+			msg.msg_flags = 0;
+
+			cur_len = recvmsg(ptr->listen_sock, &msg, 0);
+
+			/*
 			cur_len = recvfrom(ptr->listen_sock, recv_buf, 4096, 0,
 							   (struct sockaddr *)&client_addr,
 							   (int *)&client_size);
+			*/
+
+			if (msg.msg_flags & MSG_CTRUNC)
+				puts("WARN: CMSG Truncated");
 
 			p_record = &(ptr->record[ptr->count]);
 
 			p_record->seq = recv_buf[0];
-			cur_time = get_time();
+			cur_time = get_time(&msg);
 			p_record->sec = (int)cur_time;
 			p_record->u_sec = (int)((cur_time - p_record->sec) * 1000000);
 
@@ -354,7 +395,7 @@ void update_filter_list(
          * enough to be considered "finish", or have no data to receive */
 	p = filter_list;
 	pre = NULL;
-	cur_time = get_time();
+	cur_time = get_time(NULL);
 	while (p != NULL)
 	{
 		if (p->dead)
@@ -409,7 +450,7 @@ void update_filter_list(
 		}
 		close(p->control_sock);
 		p->control_sock = newsd;
-		p->pre_time = get_time();
+		p->pre_time = get_time(NULL);
 		p->count = 0;
 		p->probe_num = probe_num;
 		p->nodata_count = 0;
@@ -430,7 +471,7 @@ void update_filter_list(
 		p->src_ip = inet_addr(src_ip_str);
 		p->dst_ip = inet_addr(dst_ip_str);
 		p->control_sock = newsd;
-		p->pre_time = get_time();
+		p->pre_time = get_time(NULL);
 		p->count = 0;
 		p->probe_num = probe_num;
 		p->nodata_count = 0;
@@ -475,6 +516,13 @@ void update_filter_list(
 		else
 		{
 			pre->next = p;
+		}
+
+		// set timestampns
+		int enable = 1;
+		if (setsockopt(p->listen_sock, SOL_SOCKET, SO_TIMESTAMPNS, &enable, sizeof(enable))) {
+			perror("setsockopt");
+			exit(1);
 		}
 
 		pthread_create(&(p->thread), NULL,
