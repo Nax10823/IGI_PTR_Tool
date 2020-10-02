@@ -4,7 +4,10 @@ IGI/PTR is an end-to-end available bandwidth measurement tool, it implements two
 
 WHAT'S NEW
 ==========
-This version improves IGI/PTR's performance on high-loaded paths (say 80% of utilization). Compared with the previous version, this version can obtain more accurate estimation. See ChangeLog in the source tar-ball for detailed changes.
+org: This version improves IGI/PTR's performance on high-loaded paths (say 80% of utilization). Compared with the previous version, this version can obtain more accurate estimation. See ChangeLog in the source tar-ball for detailed changes.
+
+new in this repo:
+Modified get_time to use kernel timestamps (SO_TIMESTAMPNS) for receive time recording. Modified TCP port to always use port 8889 and udp port starting from 8890.
 
 BUILD
 =====
