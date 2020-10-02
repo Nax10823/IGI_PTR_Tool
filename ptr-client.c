@@ -189,6 +189,10 @@ void dump_trace()
 					p->send_times[i] - p->send_times[i - 1]);
 		}
 		fprintf(trace_fp, "];\n");
+		fprintf(trace_fp, "sendTimestamp_%d = [\n", index);
+		for (i = 0; i < p->probe_num; i++)
+			fprintf(trace_fp, "%f ", p->send_times[i]);
+		fprintf(trace_fp, "];\n");
 		fprintf(trace_fp, "send_array_size(%d) = %d; \n\n",
 				index, p->probe_num - 1);
 
@@ -206,6 +210,14 @@ void dump_trace()
 					get_rcd_time(p->rcv_record[i + 1]) -
 						get_rcd_time(p->rcv_record[i]),
 					p->rcv_record[i + 1].seq);
+		}
+		fprintf(trace_fp, "];\n");
+		fprintf(trace_fp, "recvTimestamp_%d = [\n", index);
+		for (i = 0; i < p->record_count; i++)
+		{
+			fprintf(trace_fp, "%f %d ",
+					get_rcd_time(p->rcv_record[i]),
+					p->rcv_record[i].seq);
 		}
 		fprintf(trace_fp, "];\n");
 		fprintf(trace_fp, "recv_array_size(%d) = %d; \n\n",
