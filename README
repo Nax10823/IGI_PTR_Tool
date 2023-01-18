@@ -7,7 +7,7 @@ WHAT'S NEW
 org: This version improves IGI/PTR's performance on high-loaded paths (say 80% of utilization). Compared with the previous version, this version can obtain more accurate estimation. See ChangeLog in the source tar-ball for detailed changes.
 
 new in this repo:
-Modified get_time to use kernel timestamps (SO_TIMESTAMPNS) for receive time recording or otherwise use clock_gettime. Modified server to pass back nano-precision timestamps instead of micro-precision. Modified TCP port to always use port 8889 and udp port starting from 8890. Disabled debugging symbols and enabled compiler optimization.
+Modified get_time to use kernel timestamps (SO_TIMESTAMPNS) for receive time recording or otherwise use clock_gettime. Modified server to pass back nano-precision timestamps instead of micro-precision. Modified TCP port to always use port 8889 and udp port starting from 8890. Disabled debugging symbols and enabled compiler optimization. Removed use of delay_num busy loop and used get time busy loop for gap generation.
 
 BUILD
 =====

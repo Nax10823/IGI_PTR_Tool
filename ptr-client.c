@@ -54,7 +54,8 @@ extern int optind, opterr, optopt;
 
 char version[] = "2.1";
 
-int delay_num = 0;
+//int delay_num = 0;
+double delay_gap;
 int packet_size = PacketSize;
 int phase_num = 3;
 int probe_num = ProbeNum;
@@ -94,7 +95,8 @@ int msg_len;
 /* trace item: record the item used to dump out into trace file */
 struct trace_item
 {
-	int probe_num, packet_size, delay_num;
+	int probe_num, packet_size; //, delay_num;
+	double delay_gap;
 
 	double send_times[MaxProbeNum];
 	struct pkt_rcd_t rcv_record[MaxProbeNum];
@@ -152,15 +154,15 @@ void dump_trace()
 	/* first dump out the summary data */
 	p = trace_list;
 	index = 0;
-	fprintf(trace_fp, "\n%%probe_num packet_size delay_num avg_src_gap arv_dst_gap b_bw c_bw a_bw ptr\n");
+	fprintf(trace_fp, "\n%%probe_num packet_size delay_gap avg_src_gap arv_dst_gap b_bw c_bw a_bw ptr\n");
 	fprintf(trace_fp, "summary_data = [\n");
 	while (p != NULL)
 	{
 		index++;
-		fprintf(trace_fp, "%2d %4d %5d %f %f %12.3f %12.3f %12.3f %12.3f\n",
+		fprintf(trace_fp, "%2d %4d %.9f %f %f %12.3f %12.3f %12.3f %12.3f\n",
 				p->probe_num,
 				p->packet_size,
-				p->delay_num,
+				p->delay_gap,
 				p->avg_src_gap,
 				p->avg_dst_gap,
 				p->b_bw,
@@ -281,6 +283,7 @@ double get_time()
 }
 
 /* find the delay number which can set the src_gap exactly as "gap" */
+// not used any more
 int get_delay_num(double gap)
 {
 #define Scale (10)
@@ -606,10 +609,11 @@ void init_connection()
 
 /* send out probe_num packets, each packet is packet_size bytes,   */
 /* and the inital gap is set using delay_num                       */
-void send_packets(int probe_num, int packet_size, int delay_num, double *sent_times)
+// now uses delay_gap as the the inital gap, and use busy get time loop to gen gap
+void send_packets(int probe_num, int packet_size, double gap, double *sent_times)
 {
 	int i, k;
-	double tmp = 133333.0003333;
+	double start;
 	char send_buf[4096];
 
 	/* send out probing packets */
@@ -622,11 +626,15 @@ void send_packets(int probe_num, int packet_size, int delay_num, double *sent_ti
 		sendto(probing_sock, send_buf, packet_size, 0, (struct sockaddr *)&(probing_server), sizeof(probing_server));
 
 		/* gap generation */
-		for (k = 0; k < delay_num; k++)
-		{
-			tmp = tmp * 7;
-			tmp = tmp / 13;
-		}
+		// for (k = 0; k < delay_num; k++)
+		// {
+		// 	tmp = tmp * 7;
+		// 	tmp = tmp / 13;
+		// }
+
+		// use busy loop for gap
+		start = get_time();
+		while (get_time()-start < gap);
 	}
 
 	/* the last packets */
@@ -878,11 +886,11 @@ void get_bandwidth()
 void one_phase_probing()
 {
 	if (verbose)
-		printf("\nprobe_num = %d packet_size = %d delay_num = %d \n",
-			   probe_num, packet_size, delay_num);
+		printf("\nprobe_num = %d packet_size = %d delay_gap = %.9f \n",
+			   probe_num, packet_size, delay_gap);
 
 	/* probing */
-	send_packets(probe_num, packet_size, delay_num, send_times);
+	send_packets(probe_num, packet_size, delay_gap, send_times);
 	if (trace_fp != NULL)
 	{
 		/* create a new trace item */
@@ -939,7 +947,7 @@ void one_phase_probing()
 
 		cur_trace->probe_num = probe_num;
 		cur_trace->packet_size = packet_size;
-		cur_trace->delay_num = delay_num;
+		cur_trace->delay_gap = delay_gap;
 
 		memcpy(cur_trace->send_times, send_times,
 			   sizeof(double) * probe_num);
@@ -1015,19 +1023,25 @@ int gap_comp(double dst_gap, double src_gap)
 
 void fast_probing()
 {
-	int double_check = 0, first = 1, tmp_num;
+	int double_check = 0, first = 1; //, tmp_num;
 	double interval, pre_gap = 0;
 	double saved_ptr, saved_abw;
+	double tmp_gap;
 
 	probing_start_time = get_time();
 
-	delay_num = 0;
+	// delay_num = 0;
+	delay_gap = 0; // send asap
 	n_phase_probing(phase_num);
 	b_bw = get_bottleneck_bw((struct pkt_rcd_t *)&dst_gap, total_count);
 
-	delay_num = get_delay_num(avg_dst_gap);
-	interval = (double)delay_num / 4;
-	delay_num /= 2;
+	// delay_num = get_delay_num(avg_dst_gap);
+	// interval = (double)delay_num / 4;
+	// delay_num /= 2;
+
+	delay_gap = avg_dst_gap;
+	interval = (double)delay_gap / 4;
+	delay_gap /= 2;
 
 	while (1)
 	{
@@ -1053,11 +1067,16 @@ void fast_probing()
 
 		if (!first && tlt_dst_gap >= 1.5 * tlt_src_gap)
 		{
-			tmp_num = get_delay_num((tlt_src_gap + tlt_dst_gap) / (2 * total_count));
-			if (tmp_num > delay_num)
-				delay_num = tmp_num;
+			// tmp_num = get_delay_num((tlt_src_gap + tlt_dst_gap) / (2 * total_count));
+			// if (tmp_num > delay_num)
+			// 	delay_num = tmp_num;
+
+			tmp_gap = (tlt_src_gap + tlt_dst_gap) / (2 * total_count);
+			if (tmp_gap > delay_gap)
+				delay_gap = tmp_gap;
 		}
-		delay_num = (int)(delay_num + interval);
+		// delay_num = (int)(delay_num + interval);
+		delay_gap = delay_gap+interval;
 
 		/* TODO: need a better way to deal with them */
 		saved_ptr = PTR_bw;
@@ -1088,9 +1107,9 @@ int main(int argc, char *argv[])
 				printf("phase_num is too large, reset as %d\n", MaxRepeat);
 			}
 			break;
-		case 'l':
-			delay_num = atoi(optarg);
-			break;
+		// case 'l':
+		// 	delay_num = atoi(optarg);
+		// 	break;
 		case 'n':
 			probe_num = atoi(optarg);
 			if (probe_num > MaxProbeNum)
@@ -1138,13 +1157,13 @@ int main(int argc, char *argv[])
 	sleep(2);
 
 	/* probing */
-	if (delay_num > 0)
-	{
-		one_phase_probing();
-		get_bandwidth();
-		dump_bandwidth();
-	}
-	else
+	// if (delay_num > 0)
+	// {
+	// 	one_phase_probing();
+	// 	get_bandwidth();
+	// 	dump_bandwidth();
+	// }
+	// else
 		fast_probing();
 
 	/* finishing */
