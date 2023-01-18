@@ -134,7 +134,7 @@ void Usage()
 /* combine the sec & usec of record into a real number */
 double get_rcd_time(struct pkt_rcd_t record)
 {
-	return (record.sec + (double)record.u_sec / 1000000);
+	return (record.sec + (double)record.n_sec / 1000000000);
 }
 
 /* dump out all the trace packet time stamps */
@@ -185,13 +185,13 @@ void dump_trace()
 			/*fprintf(trace_fp, "%f %f %f ", 
 			p->send_times[i-1], p->send_times[i], 
 			p->send_times[i] - p->send_times[i-1]);*/
-			fprintf(trace_fp, "%f ",
+			fprintf(trace_fp, "%.9f ",
 					p->send_times[i] - p->send_times[i - 1]);
 		}
 		fprintf(trace_fp, "];\n");
 		fprintf(trace_fp, "sendTimestamp_%d = [\n", index);
 		for (i = 0; i < p->probe_num; i++)
-			fprintf(trace_fp, "%f ", p->send_times[i]);
+			fprintf(trace_fp, "%.9f ", p->send_times[i]);
 		fprintf(trace_fp, "];\n");
 		fprintf(trace_fp, "send_array_size(%d) = %d; \n\n",
 				index, p->probe_num - 1);
@@ -206,7 +206,7 @@ void dump_trace()
 			get_rcd_time(p->rcv_record[i+1]) - 
 			get_rcd_time(p->rcv_record[i]),
 			p->rcv_record[i+1].seq);*/
-			fprintf(trace_fp, "%f %d ",
+			fprintf(trace_fp, "%.9f %d ",
 					get_rcd_time(p->rcv_record[i + 1]) -
 						get_rcd_time(p->rcv_record[i]),
 					p->rcv_record[i + 1].seq);
@@ -215,7 +215,7 @@ void dump_trace()
 		fprintf(trace_fp, "recvTimestamp_%d = [\n", index);
 		for (i = 0; i < p->record_count; i++)
 		{
-			fprintf(trace_fp, "%f %d ",
+			fprintf(trace_fp, "%.9f %d ",
 					get_rcd_time(p->rcv_record[i]),
 					p->rcv_record[i].seq);
 		}
@@ -267,17 +267,16 @@ void quit()
 /* get the current time */
 double get_time()
 {
-	struct timeval tv;
-	struct timezone tz;
+	struct timespec tp;
 	double cur_time;
 
-	if (gettimeofday(&tv, &tz) < 0)
+	if (clock_gettime(CLOCK_REALTIME, &tp) < 0)
 	{
 		perror("get_time() fails, exit\n");
 		quit();
 	}
 
-	cur_time = (double)tv.tv_sec + ((double)tv.tv_usec / (double)1000000.0);
+	cur_time = (double)tp.tv_sec + ((double)tp.tv_nsec / (double)1000000000.0);
 	return cur_time;
 }
 
@@ -693,11 +692,11 @@ int get_dst_gaps(struct pkt_rcd_t *rcv_record)
 		memcpy((void *)&rcv_record[i], (const void *)(msg_buf + ptr), sizeof(struct pkt_rcd_t));
 
 		rcv_record[i].sec = ntohl(rcv_record[i].sec);
-		rcv_record[i].u_sec = ntohl(rcv_record[i].u_sec);
+		rcv_record[i].n_sec = ntohl(rcv_record[i].n_sec);
 		rcv_record[i].seq = ntohl(rcv_record[i].seq);
 
 		if (debug)
-			printf("%d %d %d \n", rcv_record[i].sec, rcv_record[i].u_sec, rcv_record[i].seq);
+			printf("%d %d %d \n", rcv_record[i].sec, rcv_record[i].n_sec, rcv_record[i].seq);
 		ptr += sizeof(struct pkt_rcd_t);
 	}
 	msg_len -= data_size;

@@ -66,7 +66,7 @@ typedef unsigned short int	uint16;
 
 struct pkt_rcd_t {
 	uint32 sec;
-	uint32 u_sec;
+	uint32 n_sec;
 	uint32 seq;
 }; 
  

@@ -135,16 +135,15 @@ double get_time(struct msghdr *msgh)
 	double cur_time;
 
 	if (msgh == NULL) {
-		struct timeval tv;
-		struct timezone tz;
+		struct timespec tp;
 
-		if (gettimeofday(&tv, &tz) < 0)
+		if (clock_gettime(CLOCK_REALTIME, &tp) < 0)
 		{
 			perror("get_time() fails, exit\n");
 			exit(1);
 		}
 
-		cur_time = (double)tv.tv_sec + ((double)tv.tv_usec / (double)1000000.0);
+		cur_time = (double)tp.tv_sec + ((double)tp.tv_nsec / (double)1000000000.0);
 	} else {
 		struct timespec *tptr;
 		cur_time = -1;
@@ -277,7 +276,7 @@ void phase_finish()
 			for (i = 0; i < ptr->count; i++)
 			{
 				ptr->record[i].sec = htonl(ptr->record[i].sec);
-				ptr->record[i].u_sec = htonl(ptr->record[i].u_sec);
+				ptr->record[i].n_sec = htonl(ptr->record[i].n_sec);
 				ptr->record[i].seq = htonl(ptr->record[i].seq);
 			}
 #ifndef LINUX
@@ -360,10 +359,10 @@ void get_packets(struct filter_item *ptr)
 			p_record->seq = recv_buf[0];
 			cur_time = get_time(&msg);
 			p_record->sec = (int)cur_time;
-			p_record->u_sec = (int)((cur_time - p_record->sec) * 1000000);
+			p_record->n_sec = (int)((cur_time - p_record->sec) * 1000000000);
 
 			if (debug)
-				printf("%d %d.%d \n", ptr->count, p_record->sec, p_record->u_sec);
+				printf("%d %d.%d \n", ptr->count, p_record->sec, p_record->n_sec);
 
 			ptr->count++;
 			ptr->pre_time = cur_time;
