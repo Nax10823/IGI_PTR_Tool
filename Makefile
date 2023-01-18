@@ -27,7 +27,7 @@
 
 CC 	= gcc 
 INCS 	= -I. 
-CFLAGS 	= -g -Wall $(DEFS) $(INCS)
+CFLAGS 	= -Wall $(DEFS) $(INCS) -O3 #-g
 
 # for linux
 DEFS 	= -DLINUX -DRETSIGTYPE=void -DHAVE_SIGACTION=1
