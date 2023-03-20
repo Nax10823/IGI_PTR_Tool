@@ -134,7 +134,7 @@ double get_time(struct msghdr *msgh)
 {
 	double cur_time;
 
-	if (msgh == NULL) {
+	if (1) {
 		struct timespec tp;
 
 		if (clock_gettime(CLOCK_REALTIME, &tp) < 0)
