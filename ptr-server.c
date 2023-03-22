@@ -91,7 +91,7 @@ pthread_mutex_t filter_mutex;
 int sock;
 struct sockaddr_in dst_addr, src_addr;
 uint32 src_ip, dst_ip;
-uint16 src_port, dst_port;
+uint16 src_port, dst_port, saved_dst_port;
 char src_ip_str[16], dst_ip_str[16];
 int src_size, dst_size;
 
@@ -195,6 +195,7 @@ void phase_finish()
 				if (ptr->nodata_count >= MaxNoDataNum)
 				{
 					close(ptr->control_sock);
+					close(ptr->listen_sock);
 					if (verbose)
 					{
 						printf("%d no data phases, close socket with %s\n",
@@ -482,7 +483,7 @@ void update_filter_list(
 			fprintf(stderr, "server: unable to open socket.\n");
 			exit(1);
 		}
-		dst_port++;
+		dst_port = saved_dst_port+1; // always start port search from START_PORT+2
 		my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 		my_addr.sin_family = AF_INET;
 		my_addr.sin_port = htons(dst_port);
@@ -671,7 +672,7 @@ int main(int argc, char *argv[])
 	dst_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	dst_addr.sin_family = AF_INET;
 
-	dst_port = START_PORT + 1;
+	saved_dst_port = dst_port = START_PORT + 1;
 	dst_addr.sin_port = htons(dst_port);
 	if (verbose)
 	{
