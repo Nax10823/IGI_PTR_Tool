@@ -1045,36 +1045,38 @@ void fast_probing()
 
 	while (1)
 	{
-		if (gap_comp(tlt_dst_gap, tlt_src_gap) == 0)
-		{
-			if (double_check)
+		if (!first) {
+			if (gap_comp(tlt_dst_gap, tlt_src_gap) == 0)
 			{
-				tlt_dst_gap = pre_gap;
-				break;
+				if (double_check)
+				{
+					tlt_dst_gap = pre_gap;
+					break;
+				}
+				else
+				{
+					pre_gap = tlt_dst_gap;
+					double_check = 1;
+				}
 			}
 			else
 			{
-				pre_gap = tlt_dst_gap;
-				double_check = 1;
+				if (double_check && verbose)
+					printf("DISCARD: gap = %d\n", (int)(tlt_dst_gap * 1000000));
+				double_check = 0;
 			}
 		}
-		else
-		{
-			if (double_check && verbose)
-				printf("DISCARD: gap = %d\n", (int)(tlt_dst_gap * 1000000));
-			double_check = 0;
-		}
 
-		if (!first && tlt_dst_gap >= 1.5 * tlt_src_gap)
-		{
-			// tmp_num = get_delay_num((tlt_src_gap + tlt_dst_gap) / (2 * total_count));
-			// if (tmp_num > delay_num)
-			// 	delay_num = tmp_num;
+		// if (!first && tlt_dst_gap >= 1.5 * tlt_src_gap)
+		// {
+		// 	// tmp_num = get_delay_num((tlt_src_gap + tlt_dst_gap) / (2 * total_count));
+		// 	// if (tmp_num > delay_num)
+		// 	// 	delay_num = tmp_num;
 
-			tmp_gap = (tlt_src_gap + tlt_dst_gap) / (2 * total_count);
-			if (tmp_gap > delay_gap)
-				delay_gap = tmp_gap;
-		}
+		// 	tmp_gap = (tlt_src_gap + tlt_dst_gap) / (2 * total_count);
+		// 	if (tmp_gap > delay_gap)
+		// 		delay_gap = tmp_gap;
+		// }
 		// delay_num = (int)(delay_num + interval);
 		delay_gap = delay_gap+interval;
 
