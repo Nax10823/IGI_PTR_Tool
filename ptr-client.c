@@ -49,6 +49,8 @@
 #define PhaseSleep (0)
 #define ABS(a) (((a) < 0) ? -(a) : (a))
 
+#define SCHDELAY 0.0005 // 500 microsecs
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -613,17 +615,24 @@ void init_connection()
 void send_packets(int probe_num, int packet_size, double gap, double *sent_times)
 {
 	int i, k;
-	double start;
+	double now, schsendtime;
 	char send_buf[4096];
 
+	schsendtime = get_time()+SCHDELAY;
+
 	/* send out probing packets */
-	for (i = 0; i < probe_num - 1; i++)
+	for (i = 0; i < probe_num; i++)
 	{
+		// use busy loop for gap
+		// wait until schdule time
+		while (get_time() < schsendtime);
+		schsendtime += gap;
+
 		/* TODO: the middle send_times are not useful any more, since
 	     * we don't use sanity-check */
-		sent_times[i] = get_time();
 		send_buf[0] = i;
 		sendto(probing_sock, send_buf, packet_size, 0, (struct sockaddr *)&(probing_server), sizeof(probing_server));
+		sent_times[i] = get_time();
 
 		/* gap generation */
 		// for (k = 0; k < delay_num; k++)
@@ -631,18 +640,14 @@ void send_packets(int probe_num, int packet_size, double gap, double *sent_times
 		// 	tmp = tmp * 7;
 		// 	tmp = tmp / 13;
 		// }
-
-		// use busy loop for gap
-		start = get_time();
-		while (get_time()-start < gap);
 	}
 
 	/* the last packets */
-	send_buf[0] = i;
-	sendto(probing_sock, send_buf, packet_size, 0, (struct sockaddr *)&(probing_server), sizeof(probing_server));
+	// send_buf[0] = i;
+	// sendto(probing_sock, send_buf, packet_size, 0, (struct sockaddr *)&(probing_server), sizeof(probing_server));
 
 	sendto(probing_sock, send_buf, 40, 0, (struct sockaddr *)&(probing_server2), sizeof(probing_server2));
-	sent_times[probe_num - 1] = get_time();
+	// sent_times[probe_num - 1] = get_time();
 }
 
 /* get dst gap_sum and gap_count from the records */
