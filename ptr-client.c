@@ -621,9 +621,9 @@ void send_packets(int probe_num, int packet_size, double gap, double *sent_times
 	{
 		/* TODO: the middle send_times are not useful any more, since
 	     * we don't use sanity-check */
-		sent_times[i] = get_time();
 		send_buf[0] = i;
 		sendto(probing_sock, send_buf, packet_size, 0, (struct sockaddr *)&(probing_server), sizeof(probing_server));
+		sent_times[i] = get_time();
 
 		/* gap generation */
 		// for (k = 0; k < delay_num; k++)
@@ -640,9 +640,9 @@ void send_packets(int probe_num, int packet_size, double gap, double *sent_times
 	/* the last packets */
 	send_buf[0] = i;
 	sendto(probing_sock, send_buf, packet_size, 0, (struct sockaddr *)&(probing_server), sizeof(probing_server));
+	sent_times[probe_num - 1] = get_time();
 
 	sendto(probing_sock, send_buf, 40, 0, (struct sockaddr *)&(probing_server2), sizeof(probing_server2));
-	sent_times[probe_num - 1] = get_time();
 }
 
 /* get dst gap_sum and gap_count from the records */
