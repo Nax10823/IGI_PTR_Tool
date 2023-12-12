@@ -616,9 +616,11 @@ void send_packets(int probe_num, int packet_size, double gap, double *sent_times
 {
 	int i, k;
 	double now, schsendtime;
-	char send_buf[4096];
+	char send_buf[4096] = {};
 
 	schsendtime = get_time()+SCHDELAY;
+
+	send_buf[1] = probing_phase_count % 256;
 
 	/* send out probing packets */
 	for (i = 0; i < probe_num; i++)
@@ -1037,7 +1039,7 @@ void fast_probing()
 
 	// delay_num = 0;
 	delay_gap = 0; // send asap
-	n_phase_probing(phase_num);
+	n_phase_probing(1);
 	b_bw = get_bottleneck_bw((struct pkt_rcd_t *)&dst_gap, total_count);
 
 	// delay_num = get_delay_num(avg_dst_gap);

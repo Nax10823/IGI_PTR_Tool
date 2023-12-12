@@ -134,7 +134,7 @@ double get_time(struct msghdr *msgh)
 {
 	double cur_time;
 
-	if (1) {
+	if (msgh == NULL) {
 		struct timespec tp;
 
 		if (clock_gettime(CLOCK_REALTIME, &tp) < 0)
@@ -524,6 +524,12 @@ void update_filter_list(
 			perror("setsockopt");
 			exit(1);
 		}
+
+		// enable = 200;
+		// if (setsockopt(p->listen_sock, SOL_SOCKET, SO_BUSY_POLL, &enable, sizeof(enable))) {
+		// 	perror("setsockopt");
+		// 	exit(1);
+		// }
 
 		pthread_create(&(p->thread), NULL,
 					   (void *)&get_packets, (void *)p);
